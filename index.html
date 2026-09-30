@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1015">
+  <meta name="description" content="BTC、ETH 與 HYPE USDT 永續合約即時價格及過去 24 小時走勢。">
+  <title>Perp 24H Monitor</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101318'/%3E%3Cpath d='M5 22l6-7 5 3 6-10 5 4' fill='none' stroke='%2339c58b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1015;
+      --surface: #101318;
+      --surface-raised: #1a2029;
+      --border: #29313b;
+      --grid: #222a34;
+      --text: #e8edf3;
+      --muted: #98a4b2;
+      --soft: #77828f;
+      --up: #39c58b;
+      --down: #f06b79;
+      --reference: #596574;
+      --shadow: rgba(0, 0, 0, .42);
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      margin: 0;
+      min-width: 280px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+    }
+    .app {
+      width: min(100%, 560px);
+      margin: 0 auto;
+      padding: max(16px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+    }
+    .topbar {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 2px 0 14px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .connection {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .connection::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: var(--soft);
+    }
+    .connection[data-state="live"]::before { background: var(--up); }
+    .connection[data-state="error"]::before { background: var(--down); }
+    .market {
+      position: relative;
+      padding: 18px 0 16px;
+      border-top: 1px solid var(--border);
+    }
+    .market-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .symbol {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+    .contract {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: .04em;
+    }
+    .quote-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 14px;
+      row-gap: 2px;
+      margin: 7px 0 1px;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+    .last-price {
+      font-size: clamp(27px, 7.3vw, 34px);
+      font-weight: 600;
+      letter-spacing: -.025em;
+      white-space: nowrap;
+    }
+    .unit {
+      margin-left: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+    .delta {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .delta[data-direction="up"] { color: var(--up); }
+    .delta[data-direction="down"] { color: var(--down); }
+    .delta-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+    .range-label {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 210px;
+      margin-top: 7px;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: pan-y;
+    }
+    .tooltip {
+      position: absolute;
+      z-index: 2;
+      width: max-content;
+      max-width: 170px;
+      padding: 8px 10px;
+      border: 1px solid #424c5a;
+      border-radius: 7px;
+      background: var(--surface-raised);
+      box-shadow: 0 5px 18px var(--shadow);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.55;
+      pointer-events: none;
+      font-variant-numeric: tabular-nums;
+    }
+    .tooltip strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .tooltip span { color: #bdc7d3; }
+    .tooltip[hidden] { display: none; }
+    .market-error {
+      display: none;
+      position: absolute;
+      inset: 118px 86px auto 4px;
+      z-index: 1;
+      padding: 9px 10px;
+      border-radius: 6px;
+      background: rgba(16, 19, 24, .92);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .market[data-error="true"] .market-error { display: block; }
+    .skeleton {
+      display: inline-block;
+      min-width: 5ch;
+      color: var(--soft);
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 360px) {
+      .app { padding-inline: 12px; }
+      .chart-wrap { height: 196px; }
+      .last-price { font-size: 27px; }
+      .quote-row { column-gap: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>Perp 24H</h1>
+      <div class="connection" id="connection" data-state="loading" aria-live="polite">正在連線</div>
+    </header>
+
+    <div id="markets"></div>
+
+    <footer>Binance USDT 永續合約 · 每 5 秒更新 · 台灣時間</footer>
+  </main>
+
+  <template id="market-template">
+    <section class="market" data-error="false">
+      <div class="market-head">
+        <h2 class="symbol"></h2>
+        <span class="contract">永續</span>
+      </div>
+      <div class="quote-row">
+        <div class="last-price"><span class="price-value skeleton">—</span><span class="unit">USDT</span></div>
+        <div class="delta" data-direction="up">
+          <span class="delta-value">—</span>
+          <span class="delta-percent">—</span>
+          <span class="delta-label">24h</span>
+        </div>
+      </div>
+      <div class="range-label">最近 24 小時</div>
+      <div class="chart-wrap">
+        <canvas></canvas>
+        <div class="tooltip" role="tooltip" hidden><strong></strong><span></span></div>
+      </div>
+      <div class="market-error" role="status">暫時無法取得最新資料，將自動重試。</div>
+    </section>
+  </template>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const API_BASES = [
+        "https://fapi.binance.com",
+        "https://fapi1.binance.com",
+        "https://fapi2.binance.com",
+        "https://fapi3.binance.com",
+        "https://fapi4.binance.com"
+      ];
+      const UPDATE_MS = 5000;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const COLORS = {
+        text: "#e8edf3",
+        muted: "#98a4b2",
+        soft: "#77828f",
+        grid: "#222a34",
+        up: "#39c58b",
+        down: "#f06b79",
+        reference: "#596574",
+        background: "#101318",
+        tooltip: "#1a2029"
+      };
+      const definitions = [
+        { symbol: "BTCUSDT", label: "BTC / USDT", digits: 1 },
+        { symbol: "ETHUSDT", label: "ETH / USDT", digits: 2 },
+        { symbol: "HYPEUSDT", label: "HYPE / USDT", digits: 3 }
+      ];
+
+      const marketsRoot = document.getElementById("markets");
+      const template = document.getElementById("market-template");
+      const connection = document.getElementById("connection");
+      let timer = null;
+      let refreshInFlight = false;
+      let lastSuccessAt = 0;
+      let activeApiIndex = 0;
+
+      const timeFormatter = new Intl.DateTimeFormat("zh-TW", {
+        timeZone: "Asia/Taipei",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      });
+      const dateFormatter = new Intl.DateTimeFormat("zh-TW", {
+        timeZone: "Asia/Taipei",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      });
+
+      function formatPrice(value, digits) {
+        return Number(value).toLocaleString("en-US", {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        });
+      }
+
+      function formatSigned(value, digits) {
+        const sign = value < 0 ? "−" : "+";
+        return sign + formatPrice(Math.abs(value), digits);
+      }
+
+      function makeMarket(definition) {
+        const fragment = template.content.cloneNode(true);
+        const section = fragment.querySelector(".market");
+        section.dataset.symbol = definition.symbol;
+        section.querySelector(".symbol").textContent = definition.label;
+        const market = {
+          ...definition,
+          section,
+          canvas: section.querySelector("canvas"),
+          tooltip: section.querySelector(".tooltip"),
+          points: [],
+          baseline: null,
+          current: null,
+          hoverIndex: null,
+          geometry: null,
+          initialized: false
+        };
+        marketsRoot.appendChild(fragment);
+        attachInteraction(market);
+        return market;
+      }
+
+      const markets = definitions.map(makeMarket);
+
+      async function fetchJson(path, signal) {
+        let lastError = null;
+        for (let offset = 0; offset < API_BASES.length; offset += 1) {
+          const index = (activeApiIndex + offset) % API_BASES.length;
+          try {
+            const response = await fetch(API_BASES[index] + path, { signal, cache: "no-store" });
+            if (!response.ok) throw new Error("Binance API " + response.status);
+            const data = await response.json();
+            activeApiIndex = index;
+            return data;
+          } catch (error) {
+            if (error.name === "AbortError") throw error;
+            lastError = error;
+          }
+        }
+        throw lastError || new Error("Binance API unavailable");
+      }
+
+      async function loadHistory(market) {
+        const rows = await fetchJson(`/fapi/v1/klines?symbol=${market.symbol}&interval=1m&limit=1441`);
+        market.points = rows.map(row => ({ time: Number(row[6]), price: Number(row[4]) }));
+        market.baseline = market.points[0]?.price ?? null;
+        market.current = market.points.at(-1)?.price ?? null;
+        market.initialized = market.points.length > 1;
+      }
+
+      async function loadTicker(market, signal) {
+        const data = await fetchJson(`/fapi/v2/ticker/price?symbol=${market.symbol}`, signal);
+        const now = Number(data.time) || Date.now();
+        const price = Number(data.price);
+        if (!Number.isFinite(price)) throw new Error("Invalid price");
+        market.current = price;
+        market.points.push({ time: now, price });
+        const cutoff = now - DAY_MS;
+        let firstValid = 0;
+        while (firstValid < market.points.length - 1 && market.points[firstValid].time < cutoff) firstValid += 1;
+        if (firstValid > 0) market.points.splice(0, firstValid);
+        market.baseline = market.points[0]?.price ?? price;
+      }
+
+      function updateText(market) {
+        if (!Number.isFinite(market.current) || !Number.isFinite(market.baseline)) return;
+        const delta = market.current - market.baseline;
+        const percent = delta / market.baseline * 100;
+        const direction = delta >= 0 ? "up" : "down";
+        const priceNode = market.section.querySelector(".price-value");
+        priceNode.classList.remove("skeleton");
+        priceNode.textContent = formatPrice(market.current, market.digits);
+        market.section.querySelector(".delta").dataset.direction = direction;
+        market.section.querySelector(".delta-value").textContent = formatSigned(delta, market.digits);
+        market.section.querySelector(".delta-percent").textContent = formatSigned(percent, 2) + "%";
+      }
+
+      function roundedRect(ctx, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, r);
+      }
+
+      function drawPriceTag(ctx, geometry, targetY, labelY, value, color, digits) {
+        const { plotRight, width } = geometry;
+        const boxX = plotRight + 8;
+        const boxWidth = width - boxX - 2;
+        const boxHeight = 25;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(plotRight + 2, targetY);
+        ctx.lineTo(plotRight + 6, labelY);
+        ctx.lineTo(boxX, labelY);
+        ctx.stroke();
+        ctx.fillStyle = color;
+        roundedRect(ctx, boxX, labelY - boxHeight / 2, boxWidth, boxHeight, 3);
+        ctx.fill();
+        ctx.fillStyle = COLORS.text;
+        ctx.font = "500 11px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(formatPrice(value, digits), boxX + boxWidth / 2, labelY + .5);
+      }
+
+      function drawMarket(market) {
+        if (market.points.length < 2) return;
+        const canvas = market.canvas;
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const pixelWidth = Math.round(rect.width * dpr);
+        const pixelHeight = Math.round(rect.height * dpr);
+        if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+          canvas.width = pixelWidth;
+          canvas.height = pixelHeight;
+        }
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+
+        const width = rect.width;
+        const height = rect.height;
+        const plotLeft = 3;
+        const plotRight = Math.max(plotLeft + 130, width - 86);
+        const plotTop = 8;
+        const plotBottom = height - 34;
+        const prices = market.points.map(point => point.price);
+        const rawMin = Math.min(...prices);
+        const rawMax = Math.max(...prices);
+        const spread = Math.max(rawMax - rawMin, rawMax * .0005);
+        const min = rawMin - spread * .12;
+        const max = rawMax + spread * .12;
+        const startTime = market.points[0].time;
+        const endTime = market.points.at(-1).time;
+        const x = time => plotLeft + (time - startTime) / Math.max(1, endTime - startTime) * (plotRight - plotLeft);
+        const y = value => plotBottom - (value - min) / (max - min) * (plotBottom - plotTop);
+        market.geometry = { width, height, plotLeft, plotRight, plotTop, plotBottom, startTime, endTime, x, y };
+        const directionColor = market.current >= market.baseline ? COLORS.up : COLORS.down;
+
+        ctx.lineWidth = 1;
+        ctx.font = "11px system-ui, sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        [max, (max + min) / 2, min].forEach(value => {
+          const py = y(value);
+          ctx.strokeStyle = COLORS.grid;
+          ctx.beginPath();
+          ctx.moveTo(plotLeft, py);
+          ctx.lineTo(plotRight, py);
+          ctx.stroke();
+          ctx.fillStyle = COLORS.muted;
+          ctx.fillText(formatPrice(value, market.digits === 3 ? 2 : 0), width - 2, py);
+        });
+
+        const firstHour = Math.ceil(startTime / 3600000) * 3600000;
+        const labelEvery = width < 350 ? 6 : 3;
+        let hourIndex = 0;
+        for (let tick = firstHour; tick <= endTime; tick += 3600000) {
+          const px = x(tick);
+          ctx.strokeStyle = COLORS.grid;
+          ctx.beginPath();
+          ctx.moveTo(px, plotTop);
+          ctx.lineTo(px, plotBottom);
+          ctx.stroke();
+          ctx.strokeStyle = COLORS.soft;
+          ctx.beginPath();
+          ctx.moveTo(px, plotBottom + 5);
+          ctx.lineTo(px, plotBottom + 10);
+          ctx.stroke();
+          if (hourIndex % labelEvery === 0) {
+            ctx.fillStyle = COLORS.muted;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText(timeFormatter.format(tick), px, height - 4);
+          }
+          hourIndex += 1;
+        }
+
+        const baselineY = y(market.baseline);
+        const currentY = y(market.current);
+        ctx.setLineDash([3, 4]);
+        ctx.strokeStyle = COLORS.soft;
+        ctx.beginPath();
+        ctx.moveTo(plotLeft, baselineY);
+        ctx.lineTo(plotRight, baselineY);
+        ctx.stroke();
+        ctx.setLineDash([2, 4]);
+        ctx.strokeStyle = directionColor + "66";
+        ctx.beginPath();
+        ctx.moveTo(plotLeft, currentY);
+        ctx.lineTo(plotRight, currentY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = directionColor;
+        ctx.lineWidth = 1.7;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        const maxSegments = Math.max(300, Math.floor((plotRight - plotLeft) * 2));
+        const step = Math.max(1, Math.floor(market.points.length / maxSegments));
+        market.points.forEach((point, index) => {
+          if (index % step !== 0 && index !== market.points.length - 1) return;
+          const px = x(point.time);
+          const py = y(point.price);
+          if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.fillStyle = directionColor;
+        ctx.beginPath();
+        ctx.arc(plotRight, currentY, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        const minGap = 30;
+        let baselineLabelY = baselineY;
+        let currentLabelY = currentY;
+        if (Math.abs(currentLabelY - baselineLabelY) < minGap) {
+          if (currentLabelY >= baselineLabelY) {
+            currentLabelY = baselineLabelY + minGap;
+          } else {
+            baselineLabelY = currentLabelY + minGap;
+          }
+        }
+        const clampLabel = value => Math.max(plotTop + 13, Math.min(plotBottom - 13, value));
+        baselineLabelY = clampLabel(baselineLabelY);
+        currentLabelY = clampLabel(currentLabelY);
+        if (Math.abs(currentLabelY - baselineLabelY) < minGap) {
+          if (currentLabelY > baselineLabelY) currentLabelY = clampLabel(baselineLabelY + minGap);
+          else baselineLabelY = clampLabel(currentLabelY + minGap);
+        }
+        drawPriceTag(ctx, market.geometry, baselineY, baselineLabelY, market.baseline, COLORS.reference, market.digits);
+        drawPriceTag(ctx, market.geometry, currentY, currentLabelY, market.current, directionColor, market.digits);
+
+        if (market.hoverIndex !== null) drawHover(market, ctx);
+      }
+
+      function drawHover(market, ctx) {
+        const index = Math.max(0, Math.min(market.points.length - 1, market.hoverIndex));
+        const point = market.points[index];
+        const g = market.geometry;
+        const px = g.x(point.time);
+        const py = g.y(point.price);
+        ctx.strokeStyle = COLORS.soft;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(px, g.plotTop);
+        ctx.lineTo(px, g.plotBottom);
+        ctx.moveTo(g.plotLeft, py);
+        ctx.lineTo(g.plotRight, py);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = market.current >= market.baseline ? COLORS.up : COLORS.down;
+        ctx.beginPath();
+        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        market.tooltip.querySelector("strong").textContent = formatPrice(point.price, market.digits) + " USDT";
+        market.tooltip.querySelector("span").textContent = dateFormatter.format(point.time) + " · " + timeFormatter.format(point.time) + " UTC+8";
+        market.tooltip.hidden = false;
+        const tipWidth = market.tooltip.offsetWidth;
+        const tipHeight = market.tooltip.offsetHeight;
+        let left = px + 12;
+        if (left + tipWidth > g.plotRight) left = px - tipWidth - 12;
+        left = Math.max(g.plotLeft, Math.min(g.width - tipWidth, left));
+        let top = py - tipHeight - 12;
+        if (top < g.plotTop) top = py + 12;
+        top = Math.max(g.plotTop, Math.min(g.plotBottom - tipHeight, top));
+        market.tooltip.style.left = left + "px";
+        market.tooltip.style.top = top + "px";
+      }
+
+      function nearestIndex(points, targetTime) {
+        let low = 0;
+        let high = points.length - 1;
+        while (low < high) {
+          const mid = Math.floor((low + high) / 2);
+          if (points[mid].time < targetTime) low = mid + 1;
+          else high = mid;
+        }
+        if (low > 0 && Math.abs(points[low - 1].time - targetTime) < Math.abs(points[low].time - targetTime)) return low - 1;
+        return low;
+      }
+
+      function attachInteraction(market) {
+        const select = event => {
+          if (!market.geometry || !market.points.length) return;
+          const rect = market.canvas.getBoundingClientRect();
+          const px = event.clientX - rect.left;
+          const py = event.clientY - rect.top;
+          const g = market.geometry;
+          if (px < g.plotLeft || px > g.plotRight || py < g.plotTop || py > g.plotBottom) {
+            clearHover(market);
+            return;
+          }
+          const time = g.startTime + (px - g.plotLeft) / (g.plotRight - g.plotLeft) * (g.endTime - g.startTime);
+          market.hoverIndex = nearestIndex(market.points, time);
+          drawMarket(market);
+        };
+        market.canvas.addEventListener("pointermove", select);
+        market.canvas.addEventListener("pointerdown", select);
+        market.canvas.addEventListener("pointerleave", event => {
+          if (event.pointerType !== "touch") clearHover(market);
+        });
+      }
+
+      function clearHover(market) {
+        market.hoverIndex = null;
+        market.tooltip.hidden = true;
+        drawMarket(market);
+      }
+
+      function setConnection(state, text) {
+        connection.dataset.state = state;
+        connection.textContent = text;
+      }
+
+      async function initialize() {
+        setConnection("loading", "載入 24 小時資料");
+        const results = await Promise.allSettled(markets.map(loadHistory));
+        results.forEach((result, index) => {
+          const market = markets[index];
+          const failed = result.status === "rejected";
+          market.section.dataset.error = String(failed);
+          if (!failed) {
+            updateText(market);
+            drawMarket(market);
+          }
+        });
+        if (results.some(result => result.status === "fulfilled")) {
+          lastSuccessAt = Date.now();
+          setConnection("live", "資料已更新");
+        } else {
+          setConnection("error", "連線異常 · 自動重試");
+        }
+        schedule();
+      }
+
+      async function refresh() {
+        if (refreshInFlight || document.hidden) return;
+        refreshInFlight = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+        try {
+          const results = await Promise.allSettled(markets.map(async market => {
+            if (!market.initialized) await loadHistory(market);
+            await loadTicker(market, controller.signal);
+            updateText(market);
+            drawMarket(market);
+          }));
+          results.forEach((result, index) => {
+            markets[index].section.dataset.error = String(result.status === "rejected");
+          });
+          if (results.some(result => result.status === "fulfilled")) {
+            lastSuccessAt = Date.now();
+            setConnection("live", "更新於 " + timeFormatter.format(lastSuccessAt));
+          } else {
+            setConnection("error", "連線異常 · 自動重試");
+          }
+        } finally {
+          clearTimeout(timeout);
+          refreshInFlight = false;
+        }
+      }
+
+      function schedule() {
+        clearInterval(timer);
+        if (!document.hidden) timer = setInterval(refresh, UPDATE_MS);
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          clearInterval(timer);
+          timer = null;
+          setConnection("loading", "已暫停更新");
+        } else {
+          refresh();
+          schedule();
+        }
+      });
+
+      const resizeObserver = new ResizeObserver(() => markets.forEach(drawMarket));
+      markets.forEach(market => resizeObserver.observe(market.canvas));
+      initialize();
+    })();
+  </script>
+</body>
+</html>
