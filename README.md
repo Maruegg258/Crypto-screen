@@ -1,21 +1,6 @@
-# Crypto Screen
+# Crypto Screen · TradingView
 
-A compact, dark-themed monitor for Binance USDⓈ-M perpetual futures:
-
-- BTC / USDT
-- ETH / USDT
-- HYPE / USDT
-- Latest trade price refreshed every 5 seconds
-- Rolling 24-hour interactive line charts
-- 24-hour price and percentage changes
-- Hourly time ticks in Asia/Taipei
-- Numeric highlights for the current and 24-hour reference prices
-- Pointer and touch inspection for exact time and price
-- Background updates pause while the page is hidden
-
-## Run locally
-
-Open `index.html` in a browser, or serve the repository with any static web server.
+This branch maintains the compact TradingView version. The original Binance API monitor is maintained on [`main`](https://github.com/Maruegg258/Crypto-screen/tree/main).
 
 ## TradingView tab view
 
@@ -30,12 +15,10 @@ Open [`tradingview.html`](tradingview.html) for the compact TradingView version:
 
 This is a standalone HTML file with no build step, framework, API key, or backend. TradingView supplies the embedded market data and controls its update frequency, availability, change calculation, time labels, and 1D range. These are widget-defined, rather than the original page's fixed five-second refresh and exact rolling 24-hour comparison. The embedded program and data are downloaded separately from this HTML file. The wrapper does not read prices out of the iframe or report quote freshness. The chart area uses a fixed green line; price changes use the widget's gain/loss formatting.
 
-## GitHub Pages
+## Run locally
 
-In the repository, open **Settings → Pages**, select **Deploy from a branch**, then choose **main** and **/(root)**.
+Download `tradingview.html` from this branch and open it in a browser, or serve it with any static web server. An internet connection is required to load TradingView.
 
-## Data
+## Files
 
-The page reads public Binance USDⓈ-M Futures market endpoints directly from the visitor's browser. No API key or backend service is required.
-
-When Pages is enabled, append `/tradingview.html` to this repository's Pages URL to open the TradingView version. The HTML can also be opened directly after downloading it.
+`tradingview.html` is this branch's entry point. `index.html` was inherited from `main`; the original Binance version is maintained on `main`.
