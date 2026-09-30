@@ -10,6 +10,7 @@ Open [`tradingview.html`](tradingview.html) for the compact TradingView version:
 - Binance USDT perpetual contracts (`BINANCE:BTCUSDT.P`, `BINANCE:ETHUSDT.P`, `BINANCE:HYPEUSDT.P`)
 - Dark theme, native price and percentage change, an area chart, right-hand price scale, and pointer inspection
 - Native 1D / 1W / 1M range buttons; no explicit initial range is supplied by the wrapper
+- Historical chart intervals: 1D uses 5-minute bars, 1W uses 15-minute bars, and 1M uses 60-minute bars. These intervals control chart detail, not the live quote refresh frequency.
 - TradingView controls time/price axes, time-label formatting, and automatic market-data updates
 - TradingView attribution and a direct link to the selected contract
 - Keyboard tab navigation and a retry button if the embed cannot load
