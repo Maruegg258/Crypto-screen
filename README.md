@@ -17,19 +17,6 @@ A compact, dark-themed monitor for Binance USDⓈ-M perpetual futures:
 
 Open `index.html` in a browser, or serve the repository with any static web server.
 
-## TradingView tab view
-
-Open [`tradingview.html`](tradingview.html) for the compact TradingView version:
-
-- BTC, ETH, and HYPE tabs above a single Symbol Overview widget
-- Binance USDT perpetual contracts (`BINANCE:BTCUSDT.P`, `BINANCE:ETHUSDT.P`, `BINANCE:HYPEUSDT.P`)
-- Dark theme, price and percentage change, a one-day area chart, right-hand price scale, and pointer inspection
-- TradingView attribution and a direct link to the selected contract
-- Keyboard tab navigation and a retry button if the embed cannot load
-- One selected widget at a time; switching symbols removes the previous embed
-
-This is a standalone HTML file with no build step, framework, API key, or backend. TradingView supplies the embedded market data and controls its update frequency, availability, change calculation, time labels, and 1D range. These are widget-defined, rather than the original page's fixed five-second refresh and exact rolling 24-hour comparison. The embedded program and data are downloaded separately from this HTML file. The wrapper does not read prices out of the iframe or report quote freshness. The chart area uses a fixed green line; price changes use the widget's gain/loss formatting.
-
 ## GitHub Pages
 
 In the repository, open **Settings → Pages**, select **Deploy from a branch**, then choose **main** and **/(root)**.
@@ -38,4 +25,8 @@ In the repository, open **Settings → Pages**, select **Deploy from a branch**,
 
 The page reads public Binance USDⓈ-M Futures market endpoints directly from the visitor's browser. No API key or backend service is required.
 
-When Pages is enabled, append `/tradingview.html` to this repository's Pages URL to open the TradingView version. The HTML can also be opened directly after downloading it.
+
+## Versions
+
+- `main`: original Binance API monitor (`index.html`).
+- [`tradingview`](https://github.com/Maruegg258/Crypto-screen/tree/tradingview): TradingView Symbol Overview version (`tradingview.html`).
